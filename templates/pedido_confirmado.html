@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="alert alert-success d-flex align-items-center gap-2">
+  <span class="fs-4">✅</span>
+  <div>Pedido confirmado</div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <p><strong>Número de pedido:</strong> #{{ numero_pedido }}</p>
+    <p><strong>Fecha y hora:</strong> {{ fecha }}</p>
+    <p><strong>Cliente:</strong> {{ nombre }} ({{ telefono }})</p>
+    <p><strong>Retiro:</strong> {{ retiro }}</p>
+    <p><strong>Método de pago:</strong> {{ pago }}</p>
+    <p><strong>Nota:</strong> {{ nota }}</p>
+
+    <h5 class="mt-3">Productos</h5>
+    <ul>
+      {% for item in productos %}
+      <li>
+        {{ item.qty|fraccion }} {{ 'Kg' if item.unit == 'kg' else 'u' }} de {{ item.name }}
+        {% if item.promo %}<span class="badge bg-warning text-dark ms-1">PROMO</span>{% endif %}
+        = ${{ '%.2f'|format(item.line_total) }}
+      </li>
+      {% endfor %}
+    </ul>
+
+    <h4>Total: ${{ '%.2f'|format(total) }}</h4>
+    <div class="mt-3 d-flex flex-wrap gap-2">
+      <a class="btn btn-outline-success" href="{{ url_for('index') }}">Volver al catálogo</a>
+      <a class="btn btn-success" id="btn-wpp" href="{{ wpp_url }}" target="_blank">Enviar a WhatsApp</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

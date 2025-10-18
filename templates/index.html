@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-3">
+  <!-- Sidebar -->
+  <aside class="col-12 col-lg-3">
+    <form class="mb-3" method="get">
+      <div class="input-group">
+        <input name="q" value="{{ q }}" class="form-control" placeholder="Buscar productos...">
+        <button class="btn btn-success">Buscar</button>
+      </div>
+    </form>
+
+    <div class="list-group shadow-sm">
+      <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action {{ '' if cat else 'active' }}">Todas</a>
+      {% for c in categories %}
+      <a href="{{ url_for('index', cat=c) }}" class="list-group-item list-group-item-action {{ 'active' if cat==c else '' }}">{{ c }}</a>
+      {% endfor %}
+    </div>
+
+    <!-- Mini carrito -->
+    <div class="card mt-4 d-none d-lg-block">
+      <div class="card-header bg-success text-white">Mi pedido</div>
+      <ul class="list-group list-group-flush" id="mini-cart"></ul>
+      <div class="card-footer d-flex justify-content-between">
+        <strong>Total:</strong> <span id="mini-total">$ {{ '%.2f'|format(total) }}</span>
+      </div>
+      <div class="p-3 pt-0">
+        <a class="btn btn-success w-100" href="{{ url_for('carrito') }}">Ir al carrito</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Catálogo -->
+  <section class="col-12 col-lg-9">
+    <h1 class="h3 mb-3">Catálogo</h1>
+
+    <div class="row g-3">
+      {% for p in products %}
+      <div class="col-12 col-sm-6">
+        <div class="card h-100 shadow-sm">
+          <img src="{{ p.image or url_for('static', filename='img/placeholder.jpg') }}" class="card-img-top" alt="{{ p.name }}">
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title">{{ p.name }}</h5>
+            <p class="text-muted mb-2">
+              {% if p.kind == 'kg' %}Precio: ${{ '%.0f'|format(p.price) }} / Kg
+              {% else %}Precio: ${{ '%.0f'|format(p.price) }} / Unidad{% endif %}
+            </p>
+            {% if p.promo_qty and p.promo_price %}
+            <p class="text-success small">
+              Promo: {{ p.promo_qty|float }}
+              {{ 'kg' if p.kind == 'kg' else 'u' }}
+              = ${{ p.promo_price|int }}
+            </p>
+            {% endif %}
+
+            {% if p.kind == 'unit' and p.promo_qty and p.promo_price %}
+              <button
+                class="btn btn-warning w-100 mb-2 promo-btn"
+                data-name="{{ p.name }}"
+                data-unit="{{ p.kind }}"
+                data-unitprice="{{ p.price }}"
+                data-qty="{{ p.promo_qty|int }}"
+                data-price="{{ p.promo_price }}">
+                Promo: {{ p.promo_qty|int }} u x ${{ '%.0f'|format(p.promo_price) }}
+              </button>
+            {% endif %}
+
+            {% if p.kind == 'kg' %}
+              <div class="btn-group w-100 mb-2" role="group" aria-label="pesos">
+                <button class="btn btn-outline-success qty-btn" data-qty="0.25">1/4</button>
+                <button class="btn btn-outline-success qty-btn" data-qty="0.5">1/2</button>
+                <button class="btn btn-outline-success qty-btn" data-qty="1">1 Kg</button>
+              </div>
+              {% if p.promo_qty and p.promo_price %}
+              <button
+                class="btn btn-warning w-100 mb-2 promo-btn"
+                data-name="{{ p.name }}"
+                data-unit="{{ p.kind }}"
+                data-unitprice="{{ p.price }}"
+                data-qty="{{ p.promo_qty }}"
+                data-price="{{ p.promo_price }}">
+                Promo: {{ p.promo_qty|int if p.promo_qty.is_integer() else p.promo_qty }} Kg x ${{ '%.0f'|format(p.promo_price) }}
+              </button>
+              {% endif %}
+              <input type="hidden" class="picked-qty" value="0">
+            {% else %}
+              <div class="input-group mb-2">
+                <span class="input-group-text">Unidades</span>
+                <input type="number" min="1" step="1" value="1" class="form-control picked-units">
+              </div>
+            {% endif %}
+
+            <button class="btn btn-success mt-auto add-btn"
+                    data-name="{{ p.name }}"
+                    data-unit="{{ p.kind }}"
+                    data-unitprice="{{ p.price }}">
+              Agregar al carrito
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<!-- Opiniones de nuestros clientes -->
+<div class="row justify-content-center my-5">
+  <div class="col-12 col-lg-10">
+    <h3 class="mb-4 text-center">Opiniones de nuestros clientes</h3>
+    <div class="row g-3">
+      {% for r in ultimas_reseñas %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card shadow-sm" style="background:#f9f9f9;">
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-2">
+              <span class="fw-bold me-2">{{ r.name or 'Anónimo' }}</span>
+              <span style="color:#ffc107; font-size:1.3em;">
+                {% for i in range(1,6) %}
+                  {% if i <= r.rating %}
+                    &#9733;
+                  {% else %}
+                    <span style="color:#ccc;">&#9733;</span>
+                  {% endif %}
+                {% endfor %}
+              </span>
+            </div>
+            <blockquote class="blockquote mb-2" style="font-size:1.1em;">
+              “{{ r.comment }}”
+            </blockquote>
+            <div class="text-muted small">{{ r.created_at }}</div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12 text-center text-muted">Todavía no hay reseñas.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

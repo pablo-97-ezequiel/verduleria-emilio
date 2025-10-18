@@ -1,0 +1,51 @@
+body {
+  background: #fafafa;
+}
+
+.card {
+  border: 0;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+}
+
+/* Imágenes de los productos */
+.card-img-top {
+  width: 100%;
+  height: 150px;          /* altura fija en PC */
+  object-fit: contain;    /* que no se recorten */
+  object-position: center;/* siempre centradas */
+  padding: 5px;
+  background-color: #fff; /* fondo blanco uniforme */
+  border-bottom: 1px solid #eee;
+}
+
+.btn-success {
+  border-radius: 10px;
+}
+
+table.table td,
+table.table th {
+  vertical-align: middle;
+}
+
+/* Ajustes para pantallas chicas (celulares) */
+@media (max-width: 768px) {
+  .card-img-top {
+    height: 100px; /* más chicas en celular */
+  }
+}
+
+.card img {
+  object-fit: contain;
+  height: 150px;
+}
+
+.btn-group .btn.active {
+  color: #fff;
+  background: #198754;
+}
+
+#mini-cart {
+  max-height: 260px;
+  overflow: auto;
+}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Carrito de compras</h1>
+
+{% if cart %}
+<div class="table-responsive shadow-sm">
+  <table class="table align-middle">
+    <thead class="table-success">
+      <tr>
+        <th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th><th></th>
+      </tr>
+    </thead>
+    <tbody id="cart-body">
+      {% for item in cart %}
+      <tr>
+        <td>
+          {{ item.name }}
+          {% if item.promo %}<span class="badge bg-warning text-dark ms-1">PROMO</span>{% endif %}
+        </td>
+        <td>{{ item.qty|fraccion }} {{ 'Kg' if item.unit == 'kg' else 'u' }}</td>
+        <td>${{ '%.2f'|format(item.unit_price) }}</td>
+        <td>${{ '%.2f'|format(item.line_total) }}</td>
+        <td>
+          <button class="btn btn-danger btn-sm del-item" data-index="{{ loop.index0 }}">Eliminar</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th colspan="3" class="text-end">Total:</th>
+        <th id="cart-total">${{ '%.2f'|format(total) }}</th>
+        <th></th>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="text-end mt-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">Seguir comprando</a>
+  <a class="btn btn-success" href="{{ url_for('pedido') }}">Confirmar pedido</a>
+</div>
+{% else %}
+<div class="alert alert-info">Tu carrito está vacío. <a href="{{ url_for('index') }}">Volver al catálogo</a></div>
+{% endif %}
+{% endblock %}

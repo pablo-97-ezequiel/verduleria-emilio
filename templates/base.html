@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verdulería Emilio</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-success mb-4">
+  <div class="container">
+    <!-- Logo aún más grande con fondo blanco circular -->
+    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+      <span style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        border-radius: 50%;
+        height: 180px;
+        width: 180px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-right: 32px;
+      ">
+        <img src="{{ url_for('static', filename='img/logo.png') }}"
+             alt="Logo Verdulería Emilio"
+             style="height:145px; width:auto; display:inline-block;">
+      </span>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Menú">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div id="nav" class="collapse navbar-collapse">
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-2">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('carrito') }}">Carrito <span class="badge bg-warning text-dark" id="mini-count">0</span></a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('contacto') }}">Contacto</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<main class="container my-4">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="text-center py-4 bg-success text-white">
+  © 2025 Verdulería Emilio
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  window.CART_TOTAL = {{ total|default(0) }};
+  window.CART_COUNT = {{ cart|length if cart is defined else 0 }};
+</script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

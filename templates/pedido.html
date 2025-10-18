@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Datos del cliente</h1>
+
+{% if cart %}
+<form method="post" action="{{ url_for('confirmar_pedido') }}" class="row g-3">
+  <div class="col-12 col-md-6">
+    <label class="form-label">Nombre</label>
+    <input name="nombre" required class="form-control">
+  </div>
+  <div class="col-12 col-md-6">
+    <label class="form-label">Teléfono</label>
+    <input name="telefono" required class="form-control">
+  </div>
+  <div class="col-12 col-md-6">
+    <label class="form-label">Hora exacta de retiro (solo hoy)</label>
+    <input name="retiro" type="time" required class="form-control">
+  </div>
+  <div class="col-12 col-md-6">
+    <label class="form-label">Método de pago</label>
+    <select name="pago" class="form-select">
+      <option>Efectivo</option>
+      <option>Cuenta DNI</option>
+      <option>Mercado Pago</option>
+    </select>
+  </div>
+  <div class="col-12">
+    <label class="form-label">Nota (opcional)</label>
+    <textarea name="nota" class="form-control" rows="2" placeholder="Ej: sin cilantro, gracias"></textarea>
+  </div>
+
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white">Resumen</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for it in cart %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span>{{ it.qty|fraccion }} {{ 'Kg' if it.unit=='kg' else 'u' }} {{ it.name }}</span>
+
+            <strong>${{ '%.2f'|format(it.line_total) }}</strong>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card-footer d-flex justify-content-between">
+        <strong>Total</strong> <strong>${{ '%.2f'|format(total) }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 text-end">
+    <a class="btn btn-outline-secondary" href="{{ url_for('carrito') }}">Volver</a>
+    <button class="btn btn-success">Confirmar pedido</button>
+  </div>
+</form>
+{% else %}
+<div class="alert alert-info">Tu carrito está vacío. <a href="{{ url_for('index') }}">Volver al catálogo</a></div>
+{% endif %}
+{% endblock %}

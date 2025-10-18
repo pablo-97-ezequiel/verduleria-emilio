@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h4 mb-3">Contacto</h1>
+<ul class="list-group shadow-sm mb-3">
+  <li class="list-group-item">Dirección: Centro de la ciudad</li>
+  <li class="list-group-item">WhatsApp: <a href="https://wa.me/5491112345678" target="_blank">+54 9 11 1234-5678</a></li>
+  <li class="list-group-item">Instagram: @verduleria_emilio</li>
+  <li class="list-group-item">Horario: Lun a Sáb 8:00–20:30</li>
+</ul>
+<div class="row justify-content-center">
+  <div class="col-12 col-md-7 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-success text-white text-center">
+        <h4 class="mb-0">Dejanos tu reseña</h4>
+      </div>
+      <div class="card-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for cat, msg in messages %}
+              <div class="alert alert-{{ cat }} text-center">{{ msg }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+        <form method="post" action="{{ url_for('enviar_resena') }}">
+          <div class="mb-3">
+            <label for="nombre" class="form-label">Tu nombre</label>
+            <input type="text" class="form-control" name="nombre" id="nombre" maxlength="40" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Puntuación</label>
+            <div class="star-rating" style="font-size:2rem;">
+              {% for i in range(5,0,-1) %}
+              <input type="radio" name="rating" id="star{{i}}" value="{{i}}">
+              <label for="star{{i}}" title="{{i}} estrellas">&#9733;</label>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="comentario" class="form-label">Comentario</label>
+            <textarea class="form-control" name="comentario" id="comentario" rows="3" maxlength="300" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Enviar reseña</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.star-rating { direction: rtl; display: inline-flex; }
+.star-rating input { display: none; }
+.star-rating label { cursor: pointer; font-size: 2.2rem; color: #ccc; transition: transform 0.2s; }
+.star-rating label:hover,
+.star-rating label:hover ~ label,
+.star-rating input:checked ~ label { color: #ffc107; transform: scale(1.2); }
+</style>
+{% endblock %}
