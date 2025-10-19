@@ -172,10 +172,6 @@ def cart_total(cart):
 
 
 # ---------------------- rutas públicas ----------------------
-@app.route("/")
-def home():
-    return render_template("index.html")
-
 
 
 
