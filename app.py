@@ -172,36 +172,50 @@ def cart_total(cart):
 
 
 # ---------------------- rutas públicas ----------------------
-
-
-
-
 @app.route("/")
 def index():
     q = request.args.get("q", "").strip().lower()
     cat = request.args.get("cat", "").strip()
-    with db() as con:
+
+    with db as con:
+        # Productos principales
         rows = con.execute("SELECT * FROM products").fetchall()
-        ultimas_reseñas = [dict(r) for r in con.execute(
-            "SELECT * FROM reviews ORDER BY id DESC LIMIT 5"
-        )]
+
+        # Últimas reseñas (limitadas a 5)
+        ultimas_reseñas = [
+            dict(r)
+            for r in con.execute(
+                "SELECT * FROM reviews ORDER BY id DESC LIMIT 5"
+            )
+        ]
+
     products = [dict(r) for r in rows]
 
+    # Filtrado por búsqueda
     if q:
         products = [p for p in products if q in p["name"].lower()]
+
+    # Filtrado por categoría
     if cat:
         products = [p for p in products if p["category"] == cat]
 
-    # categorías para el sidebar
-    categories = sorted({p["category"] for p in products} | 
-                        {p["category"] for p in [dict(r) for r in rows]})
+    # Categorías únicas para el sidebar
+    categories = sorted(
+        {p["category"] for p in products if "category" in p}
+    )
 
-    return render_template("index.html",
-                           products=products,
-                           categories=categories,
-                           q=q, cat=cat,
-                           cart=get_cart(), total=cart_total(get_cart()),
-                           ultimas_reseñas=ultimas_reseñas)
+    # Render de la plantilla principal
+    return render_template(
+        "index.html",
+        products=products,
+        categories=categories,
+        q=q,
+        cat=cat,
+        cart=get_cart(),
+        total=cart_total(get_cart()),
+        ultimas_reseñas=ultimas_reseñas
+    )
+
 
 @app.post("/agregar_carrito")
 def agregar_carrito():
