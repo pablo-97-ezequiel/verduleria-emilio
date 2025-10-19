@@ -173,8 +173,9 @@ def cart_total(cart):
 
 # ---------------------- rutas públicas ----------------------
 @app.route("/")
-def inicio():
-    return "<h1>Servidor online ✅ Verdulería Emilio</h1>"
+def home():
+    return render_template("index.html")
+
 
 
 
