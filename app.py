@@ -184,16 +184,19 @@ def index():
     cat = request.args.get("cat", "").strip()
 
     with db as con:
-        # Productos principales
         rows = con.execute("SELECT * FROM products").fetchall()
 
-        # Últimas reseñas (limitadas a 5)
+    try:
         ultimas_reseñas = [
             dict(r)
             for r in con.execute(
                 "SELECT * FROM reviews ORDER BY id DESC LIMIT 5"
             )
         ]
+    except Exception as e:
+        print("⚠️ Error al cargar reseñas:", e)
+        ultimas_reseñas = []
+
 
     products = [dict(r) for r in rows]
 
