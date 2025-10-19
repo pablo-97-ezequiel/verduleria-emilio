@@ -173,6 +173,13 @@ def cart_total(cart):
 
 # ---------------------- rutas públicas ----------------------
 @app.route("/")
+def inicio():
+    return "<h1>Servidor online ✅ Verdulería Emilio</h1>"
+
+
+
+
+@app.route("/")
 def index():
     q = request.args.get("q", "").strip().lower()
     cat = request.args.get("cat", "").strip()
