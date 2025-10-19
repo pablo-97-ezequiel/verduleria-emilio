@@ -1,3 +1,9 @@
+app = Flask(__name__)
+app.debug = True  # 👈 activá esto
+
+
+
+
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 import sqlite3, os, datetime
 from fractions import Fraction  # 👈 agregado acá
