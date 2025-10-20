@@ -1,9 +1,6 @@
 app = Flask(__name__)
 app.debug = True  # 👈 activá esto
 
-
-
-
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 import sqlite3, os, datetime
 from fractions import Fraction  # 👈 agregado acá
@@ -183,20 +180,18 @@ def index():
     q = request.args.get("q", "").strip().lower()
     cat = request.args.get("cat", "").strip()
 
-    with db as con:
+    with db() as con:
+
+        # Productos principales
         rows = con.execute("SELECT * FROM products").fetchall()
 
-    try:
+        # Últimas reseñas (limitadas a 5)
         ultimas_reseñas = [
             dict(r)
             for r in con.execute(
                 "SELECT * FROM reviews ORDER BY id DESC LIMIT 5"
             )
         ]
-    except Exception as e:
-        print("⚠️ Error al cargar reseñas:", e)
-        ultimas_reseñas = []
-
 
     products = [dict(r) for r in rows]
 
