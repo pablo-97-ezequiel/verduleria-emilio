@@ -21,7 +21,8 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
-        <form method="post" action="{{ url_for('enviar_resena') }}">
+        <form method="post" action="{{ url_for('contacto') }}">
+
           <div class="mb-3">
             <label for="nombre" class="form-label">Tu nombre</label>
             <input type="text" class="form-control" name="nombre" id="nombre" maxlength="40" required>

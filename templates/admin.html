@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 {% if mode == 'login' %}
+
+<!-- ========== LOGIN ADMIN ========== -->
 <div class="row justify-content-center">
   <div class="col-12 col-sm-7 col-lg-5">
     <div class="card shadow-sm">
-      <div class="card-header bg-success text-white">Ingreso Admin</div>
+      <div class="card-header bg-success text-white text-center">
+        Ingreso Admin
+      </div>
       <form method="post" class="card-body">
         <label class="form-label">PIN</label>
         <input name="pin" type="password" class="form-control" required>
@@ -13,35 +17,54 @@
     </div>
   </div>
 </div>
+
 {% else %}
+
+<!-- ========== PANEL ADMIN PRINCIPAL ========== -->
 <div class="d-flex justify-content-between align-items-center mb-2">
-  <h1 class="h4">Admin – Productos</h1>
+  <h1 class="h4">Panel de Administración</h1>
   <div>
-    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('admin_salir') }}">Salir</a>
-    <a class="btn btn-success btn-sm" href="{{ url_for('admin_new') }}">Nuevo producto</a>
+    <a class="btn btn-success btn-sm" href="{{ url_for('admin_new') }}">➕ Nuevo producto</a>
+    <a class="btn btn-success btn-sm" href="{{ url_for('admin') }}">🔄 Actualizar lista</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('logout_admin') }}">🚪 Salir</a>
   </div>
 </div>
 
+<!-- ========== LISTA DE PRODUCTOS ========== -->
+<h4 class="mt-3 mb-2">🛒 Productos</h4>
 <div class="table-responsive shadow-sm">
   <table class="table align-middle">
     <thead class="table-success">
-      <tr><th>Nombre</th><th>Categoría</th><th>Tipo</th><th>Precio</th><th>Promo</th><th></th></tr>
+      <tr>
+        <th>Nombre</th>
+        <th>Categoría</th>
+        <th>Tipo</th>
+        <th>Precio</th>
+        <th>Promo</th>
+        <th>Imagen</th>
+        <th></th>
+      </tr>
     </thead>
     <tbody>
       {% for p in products %}
       <tr>
         <td>{{ p.name }}</td>
         <td>{{ p.category }}</td>
-        <td>{{ p.kind }}</td>
+        <td>{{ 'Por Kg' if p.kind == 'kg' else 'Por Unidad' }}</td>
         <td>${{ '%.2f'|format(p.price) }}</td>
         <td>
           {% if p.promo_qty %}
             {{ p.promo_qty|fraccion }} {{ 'Kg' if p.kind == 'kg' else 'u' }}
           {% endif %}
+          {% if p.promo_price %}
+            – ${{ '%.2f'|format(p.promo_price) }}
+          {% endif %}
         </td>
         <td>
-          {% if p.promo_price %}
-            ${{ '%.2f'|format(p.promo_price) }}
+          {% if p.image %}
+            <img src="{{ p.image }}" alt="imagen" width="60" height="60" class="rounded">
+          {% else %}
+            <span class="text-muted">Sin imagen</span>
           {% endif %}
         </td>
         <td class="text-end">
@@ -52,96 +75,109 @@
           </form>
         </td>
       </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="text-center text-muted">No hay productos cargados.</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
-<h4 class="mt-4">Pedidos del día</h4>
-<form method="post" action="{{ url_for('eliminar_todos_pedidos') }}" class="mb-2">
-  <button type="submit" class="btn btn-danger btn-sm">
-    🧹 Borrar todos los pedidos del día
+<!-- ========== LISTA DE PEDIDOS DEL DÍA ========== -->
+<h4 class="mt-4 mb-2">📦 Pedidos del día</h4>
+<form method="post" action="{{ url_for('eliminar_todos_pedidos') }}" class="mb-3">
+  <button type="submit" class="btn btn-danger btn-sm"
+          onclick="return confirm('⚠️ ¿Seguro que querés borrar TODOS los pedidos?')">
+    🧹 Borrar todos los pedidos
   </button>
 </form>
-<table class="table table-bordered table-sm">
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Cliente</th>
-      <th>Teléfono</th>
-      <th>Retiro</th>
-      <th>Total</th>
-      <th>Fecha</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for o in orders %}
-    <tr>
-      <td>{{ o.number }}</td>
-      <td>{{ o.customer_name }}</td>
-      <td>{{ o.phone }}</td>
-      <td>{{ o.pickup_time }}</td>
-      <td>${{ '%.2f'|format(o.total) }}</td>
-      <td>{{ o.created_at }}</td>
-      <td>
-        <form method="post" action="{{ url_for('eliminar_pedido', order_id=o.id) }}" style="display:inline;">
-          <button type="submit" class="btn btn-danger btn-sm" title="Borrar pedido">
-            🗑️ Borrar
-          </button>
-        </form>
-      </td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="7" class="text-center text-muted">No hay pedidos hoy.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
 
-<!-- Sección de reseñas de clientes -->
+<div class="table-responsive shadow-sm">
+  <table class="table table-bordered table-sm align-middle">
+    <thead class="table-success">
+      <tr>
+        <th>#</th>
+        <th>Cliente</th>
+        <th>Teléfono</th>
+        <th>Retiro</th>
+        <th>Total</th>
+        <th>Fecha</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>{{ o.number }}</td>
+        <td>{{ o.customer_name }}</td>
+        <td>{{ o.phone }}</td>
+        <td>{{ o.pickup_time }}</td>
+        <td>${{ '%.2f'|format(o.total) }}</td>
+        <td>{{ o.created_at }}</td>
+        <td class="text-center">
+          <form method="post" action="{{ url_for('eliminar_pedido', order_id=o.id) }}" style="display:inline;">
+            <button type="submit" class="btn btn-outline-danger btn-sm"
+                    onclick="return confirm('¿Seguro que querés eliminar este pedido?')">
+              🗑️ Borrar
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="7" class="text-center text-muted">No hay pedidos hoy.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ========== RESEÑAS DE CLIENTES ========== -->
 <h4 class="mt-5 mb-3">🌟 Reseñas de clientes</h4>
-<table class="table table-bordered table-sm align-middle">
-  <thead>
-    <tr>
-      <th>Nombre</th>
-      <th>Puntuación</th>
-      <th>Comentario</th>
-      <th>Fecha</th>
-      <th>Acción</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for r in reseñas %}
-    <tr>
-      <td>{{ r.name or 'Anónimo' }}</td>
-      <td>
-        <span style="color:#ffc107; font-size:1.3em;">
-          {% for i in range(1,6) %}
-            {% if i <= r.rating %}
-              &#9733;
-            {% else %}
-              <span style="color:#ccc;">&#9733;</span>
-            {% endif %}
-          {% endfor %}
-        </span>
-      </td>
-      <td>{{ r.comment }}</td>
-      <td>{{ r.created_at }}</td>
-      <td class="text-center">
-        <form action="{{ url_for('eliminar_resena', review_id=r.id) }}" method="post" style="display:inline;">
-          <button class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta reseña?')">🗑️</button>
-        </form>
-      </td>
-    </tr>
-    {% else %}
-    <tr>
-      <td colspan="5" class="text-center text-muted">No hay reseñas aún.</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-responsive shadow-sm">
+  <table class="table table-bordered table-sm align-middle">
+    <thead class="table-success">
+      <tr>
+        <th>Nombre</th>
+        <th>Puntuación</th>
+        <th>Comentario</th>
+        <th>Fecha</th>
+        <th>Acción</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in reseñas %}
+      <tr>
+        <td>{{ r.name or 'Anónimo' }}</td>
+        <td>
+          <span style="color:#ffc107; font-size:1.3em;">
+            {% for i in range(1,6) %}
+              {% if i <= r.rating %}
+                &#9733;
+              {% else %}
+                <span style="color:#ccc;">&#9733;</span>
+              {% endif %}
+            {% endfor %}
+          </span>
+        </td>
+        <td>{{ r.comment }}</td>
+        <td>{{ r.created_at }}</td>
+        <td class="text-center">
+          <form action="{{ url_for('eliminar_resena', review_id=r.id) }}" method="post" style="display:inline;">
+            <button class="btn btn-sm btn-danger"
+                    onclick="return confirm('¿Eliminar esta reseña?')">🗑️</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5" class="text-center text-muted">No hay reseñas aún.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 {% endif %}
 {% endblock %}
-
