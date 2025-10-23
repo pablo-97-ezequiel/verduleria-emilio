@@ -96,6 +96,11 @@ def index():
     q = request.args.get("q", "").strip().lower()
     cat = request.args.get("cat", "").strip()
 
+        # Acceso oculto al panel admin
+    if q == "emilio2025":
+        return redirect(url_for("login_admin"))
+
+
     with db() as con:
         rows = con.execute("SELECT * FROM products").fetchall()
         reseñas = con.execute("SELECT * FROM reviews ORDER BY id DESC LIMIT 5").fetchall()
