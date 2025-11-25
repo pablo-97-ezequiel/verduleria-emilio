@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="h4 mb-3">{{ 'Editar' if product else 'Nuevo' }} producto</h1>
-<form method="post" class="row g-3">
+<form method="post" enctype="multipart/form-data" class="row g-3">
   <div class="col-12 col-md-6">
     <label class="form-label">Nombre</label>
     <input name="name" value="{{ product.name if product }}" required class="form-control">
@@ -34,19 +34,19 @@
     <input name="image" value="{{ product.image if product }}" class="form-control" placeholder="static/img/mi-foto.jpg">
     <small class="text-muted">Dejar vacío para usar el placeholder.</small>
   </div>
+  <div class="mb-3">
+    <label class="form-label">Imagen (ruta en static/img)</label>
+    <input type="text" name="image" class="form-control" placeholder="img/miimagen.jpg" value="{{ product.image if product else '' }}">
+    <div class="form-text">O seleccioná una imagen desde tu dispositivo (galería / PC).</div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Subir imagen (desde galería / PC)</label>
+    <input type="file" name="image_file" accept="image/*" class="form-control">
+    <div class="form-text">Formatos JPG/PNG. Si subes una imagen, se guardará en static/img/uploads/ y se usará en el producto.</div>
+  </div>
   <div class="col-12 text-end">
     <a class="btn btn-outline-secondary" href="{{ url_for('admin') }}">Cancelar</a>
     <button class="btn btn-success">Guardar</button>
   </div>
-</form>
-<div class="mb-3">
-  <label for="promo_qty" class="form-label">Cantidad promo (ej: 2 para 2kg o 3 para 3u)</label>
-  <input type="number" step="any" min="0" class="form-control" id="promo_qty" name="promo_qty"
-         value="{{ product.promo_qty if product else '' }}">
-</div>
-<div class="mb-3">
-  <label for="promo_price" class="form-label">Precio promo total</label>
-  <input type="number" step="any" min="0" class="form-control" id="promo_price" name="promo_price"
-         value="{{ product.promo_price if product else '' }}">
-</div>
+
 {% endblock %}

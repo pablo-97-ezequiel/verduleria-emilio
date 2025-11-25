@@ -60,11 +60,26 @@
             – ${{ '%.2f'|format(p.promo_price) }}
           {% endif %}
         </td>
-        <td>
-          {% if p.image %}
-            <img src="{{ p.image }}" alt="imagen" width="60" height="60" class="rounded">
+        <td class="align-middle">
+          {% set img = p.image %}
+          {% if img %}
+            {% if img.startswith('http') %}
+              <img src="{{ img }}" alt="{{ p.name }}" style="height:60px; width:auto; object-fit:contain;">
+            {% else %}
+              {% if '/' not in img %}
+                {# solo nombre -> asumimos static/img/ #}
+                <img src="{{ url_for('static', filename='img/' ~ img) }}" alt="{{ p.name }}" style="height:60px; width:auto; object-fit:contain;">
+              {% elif img.startswith('img/') %}
+                <img src="{{ url_for('static', filename=img) }}" alt="{{ p.name }}" style="height:60px; width:auto; object-fit:contain;">
+              {% elif img.startswith('static/') %}
+                <img src="{{ url_for('static', filename=img[7:]) }}" alt="{{ p.name }}" style="height:60px; width:auto; object-fit:contain;">
+              {% else %}
+                {# ruta relativa personalizada (ej: 'img/uploads/archivo.jpg' o 'uploads/archivo.jpg') #}
+                <img src="{{ url_for('static', filename=img) }}" alt="{{ p.name }}" style="height:60px; width:auto; object-fit:contain;">
+              {% endif %}
+            {% endif %}
           {% else %}
-            <span class="text-muted">Sin imagen</span>
+            <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" alt="sin imagen" style="height:60px; width:auto; object-fit:contain;">
           {% endif %}
         </td>
         <td class="text-end">

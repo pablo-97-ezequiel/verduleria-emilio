@@ -30,6 +30,39 @@
 
     <h4 class="mt-3">💰 Total: ${{ '%.2f'|format(total) }}</h4>
 
+    {% if "Mercado Pago" in pago and "Online" in pago %}
+<div class="mt-4 text-center">
+  <p class="fw-bold">Pagá tu pedido con Mercado Pago:</p>
+  <a href="https://www.mercadopago.com.ar/pampa/profile#menu-user" target="_blank"
+     class="btn btn-primary d-block mx-auto mb-2"
+     style="background-color:#009ee3;border:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/MercadoPago.svg"
+         alt="Mercado Pago" style="height:24px;">
+    <span>Ir a Mercado Pago</span>
+  </a>
+  <p class="text-muted mb-0">Alias de pago: <strong>peg1234567</strong></p>
+</div>
+
+{% elif "Cuenta DNI" in pago and "Online" in pago %}
+<div class="mt-4 text-center">
+  <p class="fw-bold">Pagá tu pedido con Cuenta DNI:</p>
+  <a href="https://cuentadni.com.ar" target="_blank"
+     class="btn btn-success d-block mx-auto mb-2"
+     style="background-color:#00a55a;border:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Cuenta_DNI_logo.png"
+         alt="Cuenta DNI" style="height:24px;">
+    <span>Abrir Cuenta DNI</span>
+  </a>
+  <p class="text-muted mb-0">Alias de pago: <strong>ejemplo.dni</strong></p>
+</div>
+
+{% elif "Efectivo" in pago or "En el local" in pago %}
+<div class="mt-4 text-center text-muted">
+  <p><strong>Pagás al retirar tu pedido. ¡Gracias!</strong></p>
+</div>
+{% endif %}
+
+
     <div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
       <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">
         🔙 Volver al catálogo

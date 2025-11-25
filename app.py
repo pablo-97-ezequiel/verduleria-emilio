@@ -8,6 +8,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import sqlite3, os, datetime
 from fractions import Fraction
 from urllib.parse import quote as urlencode
+from werkzeug.utils import secure_filename
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -20,6 +21,10 @@ app.debug = os.environ.get("FLASK_DEBUG", "0") == "1"
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "1234")
 EMILIO_WPP = os.environ.get("EMILIO_WPP", "5491167890400")
+
+# carpeta de uploads dentro de static/img
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "static", "img", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ------------------ Filtro Jinja ------------------
 def decimal_a_fraccion(valor):
@@ -179,7 +184,7 @@ def pedido():
         it["line_total"] = calcular_line_total(it)
     return render_template("pedido.html", cart=cart, total=cart_total(cart))
 
-## ------------------ Confirmar pedido ------------------
+# ------------------ Confirmar pedido ------------------
 @app.post("/confirmar_pedido")
 def confirmar_pedido():
     data = request.form
@@ -187,91 +192,69 @@ def confirmar_pedido():
     phone = data.get("telefono")
     retiro = data.get("retiro")
     nota = data.get("nota")
-    pago = data.get("pago")
+    pago = data.get("pago")  # lo mantiene por compatibilidad
     cart = get_cart()
     total = cart_total(cart)
+
+    # Nuevo: detectar si vienen los datos del JS (cuando se confirma el pedido)
+    pago_final = data.get("pago_final") or pago  # ejemplo: "Cuenta DNI - En el local"
 
     with db() as con:
         fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         today = datetime.datetime.now().strftime("%Y-%m-%d")
-
-        # generar número de pedido
-        cur = con.execute(
-            "SELECT COALESCE(MAX(number),0)+1 AS next FROM orders WHERE DATE(created_at)=?",
-            (today,)
-        )
+        cur = con.execute("SELECT COALESCE(MAX(number),0)+1 AS next FROM orders WHERE DATE(created_at)=?", (today,))
         numero = cur.fetchone()["next"]
-
-        # insertar pedido principal
         con.execute("""
             INSERT INTO orders (number, created_at, customer_name, phone, pickup_time, note, payment, total)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (numero, fecha, name, phone, retiro, nota, pago, total))
-
-        # obtener id del pedido
+        """, (numero, fecha, name, phone, retiro, nota, pago_final, total))
         order_id = con.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
 
-        # insertar los ítems
         for it in cart:
             con.execute("""
                 INSERT INTO order_items (order_id, product_name, qty, unit, unit_price, line_total)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                order_id,
-                it["name"],
-                it["qty"],
-                it["unit"],
-                it["price"],
-                calcular_line_total(it)
-            ))
-
+            """, (order_id, it["name"], it["qty"], it["unit"], it["price"], calcular_line_total(it)))
         con.commit()
 
-    # 🟢 Mensaje de WhatsApp igual al resumen
+    # Mensaje de WhatsApp - convertir cantidades a fracciones
     productos_txt = ""
     for it in cart:
-        subtotal = calcular_line_total(it)  # 👈 calculamos el total de cada ítem
-        productos_txt += (
-            f"- {it['qty']} "
-            f"{'Kg' if it['unit'] == 'kg' else 'u'} de {it['name']} "
-            f"= ${subtotal:.2f}\n"
-        )
+        qty_fraccion = decimal_a_fraccion(it['qty'])
+        productos_txt += f"- {qty_fraccion} {'Kg' if it['unit']=='kg' else 'u'} de {it['name']} = ${it['line_total']:.2f}\n"
 
     texto = (
         f"✅ Pedido #{numero}\n\n"
         f"👤 Cliente: {name}\n"
         f"📞 Tel: {phone}\n"
         f"🕐 Retiro: {retiro}\n"
-        f"💳 Pago: {pago}\n\n"
+        f"💳 Pago: {pago_final}\n\n"
         f"📦 Productos:\n{productos_txt}\n"
         f"💰 Total: ${total:.2f}\n"
         f"📝 Nota: {nota if nota else 'Ninguna'}"
     )
 
-    # ✅ Codificar texto para evitar errores 429 (acentos, ñ, espacios, etc.)
     texto_codificado = urllib.parse.quote(texto)
-
-    # 👉 Cambiá el número por el tuyo o el de la verdulería (sin + ni guiones)
     wpp_url = f"https://wa.me/5491126586256?text={texto_codificado}"
 
-    # 🧹 Vaciar carrito después de confirmar
+    # Vaciar carrito
     session.pop("cart", None)
     session.modified = True
 
-    # 🔄 Renderizar pantalla de pedido confirmado
     return render_template(
         "pedido_confirmado.html",
         numero_pedido=numero,
         nombre=name,
         telefono=phone,
         retiro=retiro,
-        pago=pago,
+        pago=pago_final,
         nota=nota,
         total=total,
         wpp_url=wpp_url,
         fecha=datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
         productos=cart
     )
+
 
 # ------------------ Contacto / reseñas ------------------
 @app.route("/contacto", methods=["GET", "POST"])
@@ -350,13 +333,26 @@ def admin_new():
         precio = float(request.form.get("price", 0))
         promo_qty = request.form.get("promo_qty")
         promo_price = request.form.get("promo_price")
-        image = request.form.get("image", "")
+        # campo de texto (ruta dentro de static/img) opcional
+        image_field = request.form.get("image", "").strip()
+
+        # archivo subido desde dispositivo (gallery / file picker)
+        image_file = request.files.get("image_file")
+        image_path = image_field or ""
+        if image_file and image_file.filename:
+            filename = secure_filename(image_file.filename)
+            # hacerlo único
+            filename = f"{int(datetime.datetime.now().timestamp())}_{filename}"
+            dest = os.path.join(UPLOAD_FOLDER, filename)
+            image_file.save(dest)
+            # ruta relativa para usar en templates: static/img/... -> almacenamos 'img/uploads/...'
+            image_path = f"img/uploads/{filename}"
 
         with db() as con:
             con.execute("""
                 INSERT INTO products (name, category, kind, price, promo_qty, promo_price, image)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (nombre, categoria, tipo, precio, promo_qty, promo_price, image))
+            """, (nombre, categoria, tipo, precio, promo_qty, promo_price, image_path))
             con.commit()
 
         flash("Producto agregado correctamente.", "success")
@@ -385,14 +381,23 @@ def admin_edit(pid):
         precio = float(request.form.get("price", 0))
         promo_qty = request.form.get("promo_qty")
         promo_price = request.form.get("promo_price")
-        image = request.form.get("image", "")
+        image_field = request.form.get("image", "").strip()
+
+        image_file = request.files.get("image_file")
+        image_path = image_field or producto["image"] or ""
+        if image_file and image_file.filename:
+            filename = secure_filename(image_file.filename)
+            filename = f"{int(datetime.datetime.now().timestamp())}_{filename}"
+            dest = os.path.join(UPLOAD_FOLDER, filename)
+            image_file.save(dest)
+            image_path = f"img/uploads/{filename}"
 
         with db() as con:
             con.execute("""
                 UPDATE products
                 SET name=?, category=?, kind=?, price=?, promo_qty=?, promo_price=?, image=?
                 WHERE id=?
-            """, (nombre, categoria, tipo, precio, promo_qty, promo_price, image, pid))
+            """, (nombre, categoria, tipo, precio, promo_qty, promo_price, image_path, pid))
             con.commit()
 
         flash("Producto actualizado correctamente.", "success")
@@ -467,3 +472,18 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
+import sqlite3
+
+# Conectar a tu base de datos
+con = sqlite3.connect("database.db")
+
+# Ejecutar el comando SQL
+con.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT;")
+
+# Guardar cambios
+con.commit()
+con.close()
+
+print("✅ Columna 'payment_method' agregada correctamente.")

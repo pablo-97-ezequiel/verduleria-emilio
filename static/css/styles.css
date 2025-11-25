@@ -1,5 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Averia+Libre:wght@400;700&display=swap');
+
 body {
   background: #fafafa;
+}
+
+/* Títulos con fuente Averia Libre */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Averia Libre', cursive;
+  font-weight: 700;
+}
+
+/* Logo agrandado */
+.navbar-brand img {
+  height: 180px;
+  width: auto;
 }
 
 .card {
