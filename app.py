@@ -476,14 +476,17 @@ if __name__ == "__main__":
 
 import sqlite3
 
-# Conectar a tu base de datos
+# Conectar a la base de datos
 con = sqlite3.connect("database.db")
 
-# Ejecutar el comando SQL
-con.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT;")
+try:
+    # Intentar agregar la columna solo si no existe
+    con.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT;")
+    print("🆕 Columna 'payment_method' agregada correctamente.")
+except sqlite3.OperationalError:
+    # Si ya existe, ignorar el error
+    print("✔️ La columna 'payment_method' ya existe. No se realizó ningún cambio.")
 
-# Guardar cambios
+# Guardar y cerrar conexión
 con.commit()
 con.close()
-
-print("✅ Columna 'payment_method' agregada correctamente.")
