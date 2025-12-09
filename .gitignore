@@ -1,0 +1,52 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+ENV/
+
+# Archivos de entorno
+.env
+.env.local
+.env.*.local
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Archivos de caché
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Archivos del IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Archivos temporales
+*.tmp
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Compilados
+dist/
+build/
+*.egg-info/
+
+# Node (si usas npm para frontend)
+node_modules/
+npm-debug.log

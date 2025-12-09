@@ -3,17 +3,24 @@
 
 <div class="alert alert-success d-flex align-items-center gap-2">
   <span class="fs-4">✅</span>
-  <div>Pedido confirmado</div>
+  <div>Confirma tu pedido por WhatsApp</div>
 </div>
 
 <div class="card shadow-sm">
   <div class="card-body">
+
     <p><strong>Número de pedido:</strong> {{ numero_pedido }}</p>
     <p><strong>Fecha y hora:</strong> {{ fecha }}</p>
     <p><strong>Cliente:</strong> {{ nombre }} ({{ telefono }})</p>
-    <p><strong>Retiro:</strong> {{ retiro }}</p>
+
+    {% if place == "retiro" %}
+      <p><strong>Retiro en el local:</strong> {{ retiro }}</p>
+    {% else %}
+      <p><strong>🚚 Delivery a:</strong> {{ delivery_address }}</p>
+    {% endif %}
+
     <p><strong>Método de pago:</strong> {{ pago }}</p>
-    <p><strong>Nota:</strong> {{ nota }}</p>
+    <p><strong>Nota:</strong> {{ nota if nota else "Sin notas" }}</p>
 
     <h5 class="mt-3">🛒 Productos</h5>
     <ul class="list-unstyled">
@@ -30,54 +37,138 @@
 
     <h4 class="mt-3">💰 Total: ${{ '%.2f'|format(total) }}</h4>
 
-    {% if "Mercado Pago" in pago and "Online" in pago %}
-<div class="mt-4 text-center">
-  <p class="fw-bold">Pagá tu pedido con Mercado Pago:</p>
-  <a href="https://www.mercadopago.com.ar/pampa/profile#menu-user" target="_blank"
-     class="btn btn-primary d-block mx-auto mb-2"
-     style="background-color:#009ee3;border:none;display:flex;align-items:center;justify-content:center;gap:8px;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/3/3e/MercadoPago.svg"
-         alt="Mercado Pago" style="height:24px;">
-    <span>Ir a Mercado Pago</span>
-  </a>
-  <p class="text-muted mb-0">Alias de pago: <strong>peg1234567</strong></p>
+
+<!-- ===================================================== -->
+<!-- MÉTODOS DE PAGO - FINAL Y SIN ERRORES DE SINTAXIS -->
+<!-- ===================================================== -->
+
+{% if "Mercado Pago" in pago and "Online" in pago %}
+
+<div class="text-center mt-4">
+
+  <h5 class="fw-bold">Pagá tu pedido con Mercado Pago</h5>
+
+  <div class="alert alert-info">
+    Alias para pagar: <strong class="text-primary">peg1234567</strong><br>
+    <small>Copialo y pegalo en tu app de Mercado Pago.</small>
+  </div>
+
+  <button class="btn btn-outline-primary w-100 mb-2"
+          onclick="navigator.clipboard.writeText('peg1234567'); alert('Alias copiado ✔');">
+    📋 Copiar alias de Mercado Pago
+  </button>
+
+  <button class="btn w-100"
+          style="background:#009ee3;color:white;"
+          onclick="window.open('https://www.mercadopago.com.ar', '_blank');">
+    🔵 Abrir Mercado Pago
+  </button>
+
+  <p class="text-muted mt-2" style="font-size:0.9rem;">
+    Este botón solo abre tu app.  
+    Luego pegá el alias para completar el pago.
+  </p>
+
 </div>
 
 {% elif "Cuenta DNI" in pago and "Online" in pago %}
-<div class="mt-4 text-center">
-  <p class="fw-bold">Pagá tu pedido con Cuenta DNI:</p>
-  <a href="https://cuentadni.com.ar" target="_blank"
-     class="btn btn-success d-block mx-auto mb-2"
-     style="background-color:#00a55a;border:none;display:flex;align-items:center;justify-content:center;gap:8px;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Cuenta_DNI_logo.png"
-         alt="Cuenta DNI" style="height:24px;">
-    <span>Abrir Cuenta DNI</span>
-  </a>
-  <p class="text-muted mb-0">Alias de pago: <strong>ejemplo.dni</strong></p>
+
+<div class="text-center mt-4">
+
+  <h5 class="fw-bold">Pagá tu pedido con Cuenta DNI</h5>
+
+  <div class="alert alert-info">
+    Alias para pagar: <strong class="text-success">ejemplo.dni</strong><br>
+    <small>Copialo y pegalo en tu app de Cuenta DNI.</small>
+  </div>
+
+  <button class="btn btn-outline-success w-100 mb-2"
+          onclick="navigator.clipboard.writeText('ejemplo.dni'); alert('Alias copiado ✔');">
+    📋 Copiar alias de Cuenta DNI
+  </button>
+
+  <button class="btn w-100"
+        style="background:#00a65a;color:white;"
+        onclick="window.location.href='bnppersonas://cuentadni'; 
+                 setTimeout(() => { 
+                   window.open('https://www.bancoprovincia.com.ar/web/cuentadni', '_blank'); 
+                 }, 800);">
+    🟢 Abrir Cuenta DNI
+</button>
+
+
+  <p class="text-muted mt-2" style="font-size:0.9rem;">
+    Este botón solo abre tu app.  
+    Luego pegá el alias para completar el pago.
+  </p>
+
 </div>
 
-{% elif "Efectivo" in pago or "En el local" in pago %}
-<div class="mt-4 text-center text-muted">
-  <p><strong>Pagás al retirar tu pedido. ¡Gracias!</strong></p>
+{% elif "Efectivo" in pago and place == "retiro" %}
+
+<div class="alert alert-success text-center mt-4 fw-bold">
+  💵 Pagás en efectivo al retirar tu pedido. ¡Gracias!
 </div>
+
+{% elif "Efectivo" in pago and place == "delivery" %}
+
+<div class="alert alert-success text-center mt-4 fw-bold">
+  💵 Pagás en efectivo al recibir el delivery. ¡Gracias!
+</div>
+
+{% else %}
+
+<div class="alert alert-info text-center mt-4 fw-bold">
+  Pago confirmado. ¡Gracias por tu compra!
+</div>
+
 {% endif %}
 
 
-    <div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
-      <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">
-        🔙 Volver al catálogo
-      </a>
+<!-- BOTONES -->
+<div class="mt-4 d-flex flex-wrap gap-2 justify-content-center">
 
-      <!-- 🟢 Botón de WhatsApp -->
-      <a class="btn btn-success" 
-         href="{{ wpp_url }}" 
-         target="_blank" 
-         rel="noopener noreferrer">
-         💬 Enviar por WhatsApp
-      </a>
-    </div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">
+    🔙 Volver al catálogo
+  </a>
+
+  <button class="btn btn-success" onclick="enviarWppYConfirmar()">
+    💬 Enviar por WhatsApp
+  </button>
+
+</div>
+
   </div>
 </div>
 
-{% endblock %}
+<script>
+  function enviarWppYConfirmar() {
+    const orderId = {{ order_id }};
+    const wppUrl = "{{ wpp_url }}";
+    
+    // Hacer POST a /marcar_enviado
+    fetch("{{ url_for('marcar_enviado') }}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ order_id: orderId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Abrir WhatsApp en nueva pestaña
+        window.open(wppUrl, "_blank");
+        alert("Pedido marcado como enviado");
+      } else {
+        alert("Error: " + data.error);
+      }
+    })
+    .catch(error => {
+      console.error("Error:", error);
+      alert("Hubo un error al procesar tu pedido");
+    });
+  }
+</script>
 
+{% endblock %}

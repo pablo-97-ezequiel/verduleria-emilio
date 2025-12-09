@@ -20,7 +20,7 @@ app.debug = os.environ.get("FLASK_DEBUG", "0") == "1"
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "1234")
-EMILIO_WPP = os.environ.get("EMILIO_WPP", "5491167890400")
+EMILIO_WPP = os.environ.get("EMILIO_WPP", "5491126586256")
 
 # carpeta de uploads dentro de static/img
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "static", "img", "uploads")
@@ -33,6 +33,7 @@ def decimal_a_fraccion(valor):
         return str(fr.numerator) if fr.denominator == 1 else f"{fr.numerator}/{fr.denominator}"
     except Exception:
         return str(valor)
+
 app.jinja_env.filters["fraccion"] = decimal_a_fraccion
 
 # ------------------ Base de datos ------------------
@@ -52,20 +53,42 @@ def init_db():
         con.execute("""
         CREATE TABLE IF NOT EXISTS orders(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            number INTEGER, created_at TEXT, customer_name TEXT,
-            phone TEXT, pickup_time TEXT, note TEXT, payment TEXT, total REAL
+            number INTEGER,
+            created_at TEXT,
+            customer_name TEXT,
+            phone TEXT,
+            pickup_time TEXT,
+            note TEXT,
+            payment TEXT,
+            total REAL,
+            place TEXT,
+            delivery_address TEXT,
+            status TEXT DEFAULT 'pendiente'
         )""")
+        # Agregar columna status si no existe (para no romper db existentes)
+        try:
+            con.execute("ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'pendiente'")
+        except:
+            pass  # Columna ya existe
         con.execute("""
         CREATE TABLE IF NOT EXISTS order_items(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_id INTEGER, product_name TEXT,
-            qty REAL, unit TEXT, unit_price REAL, line_total REAL
+            order_id INTEGER,
+            product_name TEXT,
+            qty REAL,
+            unit TEXT,
+            unit_price REAL,
+            line_total REAL
         )""")
         con.execute("""
         CREATE TABLE IF NOT EXISTS reviews(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT, rating INTEGER, comment TEXT, created_at TEXT
+            name TEXT,
+            rating INTEGER,
+            comment TEXT,
+            created_at TEXT
         )""")
+
 init_db()
 
 # ------------------ Funciones carrito ------------------
@@ -101,10 +124,9 @@ def index():
     q = request.args.get("q", "").strip().lower()
     cat = request.args.get("cat", "").strip()
 
-        # Acceso oculto al panel admin
-    if q == "emilio2025":
+    # Acceso oculto al panel admin
+    if q == "miverduleria":
         return redirect(url_for("login_admin"))
-
 
     with db() as con:
         rows = con.execute("SELECT * FROM products").fetchall()
@@ -188,73 +210,153 @@ def pedido():
 @app.post("/confirmar_pedido")
 def confirmar_pedido():
     data = request.form
+
+    # Datos del formulario
     name = data.get("nombre")
     phone = data.get("telefono")
-    retiro = data.get("retiro")
+    retiro = data.get("retiro")  # solo aplica si place == "retiro"
     nota = data.get("nota")
-    pago = data.get("pago")  # lo mantiene por compatibilidad
+
     cart = get_cart()
+    if not cart:
+        flash("Tu carrito está vacío.", "warning")
+        return redirect(url_for("index"))
+
+    # recalcular totales por seguridad
+    for it in cart:
+        it["line_total"] = calcular_line_total(it)
     total = cart_total(cart)
 
-    # Nuevo: detectar si vienen los datos del JS (cuando se confirma el pedido)
-    pago_final = data.get("pago_final") or pago  # ejemplo: "Cuenta DNI - En el local"
+    # Lugar del pedido
+    place = data.get("place")              # "retiro" o "delivery"
+    delivery_address = data.get("delivery_address")
+    pago = data.get("pago")  # compatibilidad vieja
+    pago_final = data.get("pago_final") or pago or "Sin especificar"
 
+    # Guardar en base
     with db() as con:
         fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         today = datetime.datetime.now().strftime("%Y-%m-%d")
-        cur = con.execute("SELECT COALESCE(MAX(number),0)+1 AS next FROM orders WHERE DATE(created_at)=?", (today,))
+
+        # Número de pedido del día
+        cur = con.execute(
+            "SELECT COALESCE(MAX(number),0)+1 AS next FROM orders WHERE DATE(created_at)=?",
+            (today,)
+        )
         numero = cur.fetchone()["next"]
+
         con.execute("""
-            INSERT INTO orders (number, created_at, customer_name, phone, pickup_time, note, payment, total)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (numero, fecha, name, phone, retiro, nota, pago_final, total))
-        order_id = con.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+            INSERT INTO orders (
+                number, created_at, customer_name, phone,
+                pickup_time, note, payment, total, place, delivery_address, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            numero,
+            fecha,
+            name,
+            phone,
+            retiro if place == "retiro" else None,
+            nota,
+            pago_final,
+            total,
+            place,
+            delivery_address if place == "delivery" else None,
+            'pendiente'
+        ))
+
+        order_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
 
         for it in cart:
             con.execute("""
-                INSERT INTO order_items (order_id, product_name, qty, unit, unit_price, line_total)
+                INSERT INTO order_items (
+                    order_id, product_name, qty, unit, unit_price, line_total
+                )
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (order_id, it["name"], it["qty"], it["unit"], it["price"], calcular_line_total(it)))
+            """, (
+                order_id,
+                it["name"],
+                it["qty"],
+                it["unit"],
+                it["price"],
+                calcular_line_total(it)
+            ))
+
         con.commit()
 
-    # Mensaje de WhatsApp - convertir cantidades a fracciones
+    # ======== Mensaje de WhatsApp mejorado =========
     productos_txt = ""
     for it in cart:
-        qty_fraccion = decimal_a_fraccion(it['qty'])
-        productos_txt += f"- {qty_fraccion} {'Kg' if it['unit']=='kg' else 'u'} de {it['name']} = ${it['line_total']:.2f}\n"
+        qty_fraccion = decimal_a_fraccion(it["qty"])
+        productos_txt += (
+            f"- {qty_fraccion} "
+            f"{'Kg' if it['unit']=='kg' else 'u'} "
+            f"de {it['name']} = ${it['line_total']:.2f}\n"
+        )
+
+    if place == "retiro":
+        entrega_txt = f"🕐 Retiro en el local: {retiro}"
+    else:
+        entrega_txt = f"🚚 Delivery a: {delivery_address}"
 
     texto = (
-        f"✅ Pedido #{numero}\n\n"
+        f"🧺 *Nuevo pedido*\n\n"
+        f"✅ *Pedido #{numero}*\n\n"
         f"👤 Cliente: {name}\n"
-        f"📞 Tel: {phone}\n"
-        f"🕐 Retiro: {retiro}\n"
-        f"💳 Pago: {pago_final}\n\n"
-        f"📦 Productos:\n{productos_txt}\n"
-        f"💰 Total: ${total:.2f}\n"
-        f"📝 Nota: {nota if nota else 'Ninguna'}"
+        f"📞 Teléfono: {phone}\n"
+        f"{entrega_txt}\n"
+        f"💳 Forma de pago: {pago_final}\n\n"
+        f"📦 *Detalle del pedido:*\n{productos_txt}\n"
+        f"💰 *Total:* ${total:.2f}\n"
+        f"📝 Nota del cliente: {nota if nota else 'Sin notas'}"
     )
 
     texto_codificado = urllib.parse.quote(texto)
-    wpp_url = f"https://wa.me/5491126586256?text={texto_codificado}"
+    wpp_url = f"https://wa.me/{EMILIO_WPP}?text={texto_codificado}"
 
-    # Vaciar carrito
+    # Vaciar carrito después de armar todo
     session.pop("cart", None)
     session.modified = True
 
+    # Mostrar resumen en HTML (pedido ya confirmado en la base)
     return render_template(
         "pedido_confirmado.html",
+        order_id=order_id,
         numero_pedido=numero,
         nombre=name,
         telefono=phone,
-        retiro=retiro,
+        retiro=retiro if place == "retiro" else None,
+        delivery_address=delivery_address if place == "delivery" else None,
+        place=place,
         pago=pago_final,
         nota=nota,
         total=total,
+        productos=cart,
         wpp_url=wpp_url,
-        fecha=datetime.datetime.now().strftime("%d/%m/%Y %H:%M"),
-        productos=cart
+        fecha=datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
     )
 
+# ------------------ Marcar pedido como enviado ------------------
+@app.post("/marcar_enviado")
+def marcar_enviado():
+    try:
+        data = request.get_json()
+        order_id = data.get("order_id")
+        
+        if not order_id:
+            return jsonify({"success": False, "error": "order_id no proporcionado"}), 400
+        
+        with db() as con:
+            con.execute(
+                "UPDATE orders SET status = 'enviado' WHERE id = ?",
+                (order_id,)
+            )
+            con.commit()
+        
+        return jsonify({"success": True, "message": "Pedido marcado como enviado"})
+    except Exception as e:
+        print("Error en /marcar_enviado:", e)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ------------------ Contacto / reseñas ------------------
 @app.route("/contacto", methods=["GET", "POST"])
@@ -270,7 +372,10 @@ def contacto():
             rating = int(rating)
             fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             with db() as con:
-                con.execute("INSERT INTO reviews (name, rating, comment, created_at) VALUES (?, ?, ?, ?)", (nombre, rating, comentario, fecha))
+                con.execute(
+                    "INSERT INTO reviews (name, rating, comment, created_at) VALUES (?, ?, ?, ?)",
+                    (nombre, rating, comentario, fecha)
+                )
                 con.commit()
             flash("¡Gracias por tu reseña!", "success")
             return redirect(url_for("contacto"))
@@ -279,12 +384,6 @@ def contacto():
             flash("Ocurrió un error al enviar tu reseña.", "danger")
             return redirect(url_for("contacto"))
     return render_template("contacto.html", cart=get_cart(), total=cart_total(get_cart()))
-
-
-
-
-
-
 
 # ---------------------- Admin: login ----------------------
 @app.route("/login_admin", methods=["GET", "POST"])
@@ -296,7 +395,6 @@ def login_admin():
         else:
             return render_template("login_admin.html", error="PIN incorrecto")
     return render_template("login_admin.html")
-
 
 # ---------------------- Admin: panel principal ----------------------
 @app.route("/admin")
@@ -311,14 +409,12 @@ def admin():
 
     return render_template("admin.html", products=productos, orders=pedidos, reseñas=reseñas, mode="list")
 
-
 # ---------------------- Admin: cerrar sesión ----------------------
 @app.route("/logout_admin")
 def logout_admin():
     session.pop("is_admin", None)
     flash("Sesión de administrador cerrada.", "info")
     return redirect(url_for("index"))
-
 
 # ---------------------- Admin: nuevo producto ----------------------
 @app.route("/admin_new", methods=["GET", "POST"])
@@ -359,7 +455,6 @@ def admin_new():
         return redirect(url_for("admin"))
 
     return render_template("admin_form.html", product=None)
-
 
 # ---------------------- Admin: editar producto ----------------------
 @app.route("/admin_edit/<int:pid>", methods=["GET", "POST"])
@@ -405,7 +500,6 @@ def admin_edit(pid):
 
     return render_template("admin_form.html", product=producto)
 
-
 # ---------------------- Admin: borrar producto ----------------------
 @app.post("/admin_delete/<int:pid>")
 def admin_delete(pid):
@@ -419,7 +513,6 @@ def admin_delete(pid):
     flash("Producto eliminado correctamente.", "info")
     return redirect(url_for("admin"))
 
-
 # ------------------ Admin: eliminar pedido individual ------------------
 @app.post("/eliminar_pedido/<int:order_id>")
 def eliminar_pedido(order_id):
@@ -427,14 +520,12 @@ def eliminar_pedido(order_id):
         return redirect(url_for("login_admin"))
 
     with db() as con:
-        # Borrar primero los ítems del pedido y luego el pedido
         con.execute("DELETE FROM order_items WHERE order_id = ?", (order_id,))
         con.execute("DELETE FROM orders WHERE id = ?", (order_id,))
         con.commit()
 
     flash("🗑️ Pedido eliminado correctamente.", "info")
     return redirect(url_for("admin"))
-
 
 # ------------------ Admin: eliminar todos los pedidos ------------------
 @app.post("/eliminar_todos_pedidos")
@@ -443,15 +534,12 @@ def eliminar_todos_pedidos():
         return redirect(url_for("login_admin"))
 
     with db() as con:
-        # 🧹 Borrar todos los pedidos y sus ítems sin importar la fecha
         con.execute("DELETE FROM order_items")
         con.execute("DELETE FROM orders")
         con.commit()
 
     flash("🧹 Todos los pedidos fueron eliminados correctamente.", "warning")
     return redirect(url_for("admin"))
-
-
 
 # ---------------------- Admin: eliminar reseña ----------------------
 @app.post("/eliminar_resena/<int:review_id>")
@@ -466,27 +554,7 @@ def eliminar_resena(review_id):
     flash("Reseña eliminada.", "info")
     return redirect(url_for("admin"))
 
-
 # ---------------------- INICIAR SERVIDOR ----------------------
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
-import sqlite3
-
-# Conectar a la base de datos
-con = sqlite3.connect("database.db")
-
-try:
-    # Intentar agregar la columna solo si no existe
-    con.execute("ALTER TABLE orders ADD COLUMN payment_method TEXT;")
-    print("🆕 Columna 'payment_method' agregada correctamente.")
-except sqlite3.OperationalError:
-    # Si ya existe, ignorar el error
-    print("✔️ La columna 'payment_method' ya existe. No se realizó ningún cambio.")
-
-# Guardar y cerrar conexión
-con.commit()
-con.close()

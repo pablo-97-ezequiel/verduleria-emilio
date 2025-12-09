@@ -2,13 +2,16 @@
 {% block content %}
 <h1 class="h3 mb-3">Datos del cliente</h1>
 
-<!-- === ESTILOS === -->
+<div id="badge-delivery-efectivo" 
+     class="alert alert-success text-center fw-bold" 
+     style="display:none;">
+  💵 Pagás en efectivo al delivery
+</div>
+
 <style>
   body {
     background-image: url('{{ url_for("static", filename="fondo.jpg") }}');
-    background-attachment: fixed;
     background-size: cover;
-    background-position: center;
     background-repeat: no-repeat;
   }
 
@@ -19,81 +22,94 @@
     border-radius: 8px;
     border: none;
     color: white;
-    transition: all 0.2s;
+    transition: 0.2s;
   }
-  .btn-pago:hover, .btn-lugar:hover { opacity: 0.9; }
+
   .btn-pago.active, .btn-lugar.active {
     box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    transform: scale(1.03);
+    transform: scale(1.05);
   }
-  .btn-pago.mp { background-color: #009ee3; }      /* Mercado Pago */
-  .btn-pago.dni { background-color: #00a650; }     /* Cuenta DNI */
-  .btn-pago.efectivo { background-color: #6c757d; }/* Efectivo */
-  .btn-lugar.local { background-color: #198754; }  /* En el local */
-  .btn-lugar.online { background-color: #0d6efd; } /* Online */
+
+  .btn-pago.mp { background:#009ee3; }
+  .btn-pago.dni { background:#00a650; }
+  .btn-pago.efectivo { background:#6c757d; }
+
+  .btn-lugar.local { background:#198754; }
+  .btn-lugar.online { background:#0d6efd; }
 </style>
 
 {% if cart %}
 <form method="post" action="{{ url_for('confirmar_pedido') }}" class="row g-3">
 
-  <!-- === DATOS DEL CLIENTE === -->
-  <div class="col-12 col-md-6">
-    <label class="form-label">Nombre</label>
-    <input name="nombre" required class="form-control">
+  <input type="hidden" id="place" name="place" value="retiro">
+
+  <!-- DATOS -->
+  <div class="col-md-6">
+    <label>Nombre</label>
+    <input class="form-control" name="nombre" required>
   </div>
 
-  <div class="col-12 col-md-6">
-    <label class="form-label">Teléfono</label>
-    <input name="telefono" required class="form-control">
+  <div class="col-md-6">
+    <label>Teléfono</label>
+    <input class="form-control" name="telefono" required>
   </div>
 
-  <div class="col-12 col-md-6">
-    <label class="form-label">Hora exacta de retiro (solo hoy)</label>
-    <input name="retiro" type="time" required class="form-control">
+  <!-- RETIRO -->
+  <div class="col-md-6" id="pickupBox">
+    <label>Hora exacta de retiro</label>
+    <input class="form-control" type="time" id="pickup_time" name="retiro" required>
   </div>
 
-  <!-- === MÉTODO DE PAGO INTERACTIVO === -->
+  <!-- DELIVERY -->
   <div class="col-12">
-    <h5 class="mb-2">💳 Método de pago</h5>
-    <div id="metodo-pago" class="d-flex flex-wrap gap-2">
-      <button type="button" class="btn btn-pago mp" data-pago="Mercado Pago">💙 Mercado Pago</button>
-      <button type="button" class="btn btn-pago dni" data-pago="Cuenta DNI">💚 Cuenta DNI</button>
-      <button type="button" class="btn btn-pago efectivo" data-pago="Efectivo">💵 Efectivo</button>
+    <button type="button" class="btn btn-warning w-100" onclick="selectPlace('delivery')">
+      🛵 Delivery (sin cargo)
+    </button>
+  </div>
+
+  <div id="deliveryBox" style="display:none;">
+    <label>📍 Dirección de entrega</label>
+    <input class="form-control" name="delivery_address" id="delivery_address">
+  </div>
+
+  <!-- MÉTODO DE PAGO -->
+  <div class="col-12">
+    <h5>💳 Método de pago</h5>
+    <div class="d-flex flex-wrap gap-2" id="metodo-pago">
+      <button type="button" class="btn btn-pago mp" data-pago="Mercado Pago">Mercado Pago</button>
+      <button type="button" class="btn btn-pago dni" data-pago="Cuenta DNI">Cuenta DNI</button>
+      <button type="button" class="btn btn-pago efectivo" data-pago="Efectivo">Efectivo</button>
     </div>
   </div>
 
-  <!-- === LUGAR DE PAGO === -->
+  <!-- LUGAR DE PAGO -->
   <div class="col-12">
-    <h5 class="mb-2 mt-3">📍 Dónde querés pagar</h5>
-    <div id="lugar-pago" class="d-flex flex-wrap gap-2">
-      <button type="button" class="btn btn-lugar local" data-lugar="En el local">🏪 En el local</button>
-      <button type="button" class="btn btn-lugar online" data-lugar="Online">💻 Online</button>
+    <h5 class="mt-2">📍 Dónde querés pagar</h5>
+    <div class="d-flex flex-wrap gap-2" id="lugar-pago">
+      <button type="button" class="btn btn-lugar local" data-lugar="En el local">En el local</button>
+      <button type="button" class="btn btn-lugar online" data-lugar="Online">Online</button>
     </div>
   </div>
 
-  <!-- ✅ MENSAJE DE CONFIRMACIÓN -->
-  <p id="mensaje-confirmacion" class="text-success fw-bold mt-3" style="display:none;"></p>
+  <p id="mensaje-confirmacion" class="text-success fw-bold mt-2" style="display:none;"></p>
 
-  <!-- === NOTA OPCIONAL === -->
+  <!-- NOTA -->
   <div class="col-12">
-    <label class="form-label">Nota (opcional)</label>
-    <textarea name="nota" class="form-control" rows="2" placeholder="Ej: sin cilantro, gracias"></textarea>
+    <label>Nota (opcional)</label>
+    <textarea class="form-control" name="nota" rows="2"></textarea>
   </div>
 
-  <!-- === RESUMEN DE PEDIDO === -->
+  <!-- RESUMEN -->
   <div class="col-12">
     <div class="card shadow-sm">
       <div class="card-header bg-success text-white">Resumen</div>
       <div class="card-body">
-        <ul class="list-group list-group-flush">
+        <ul class="list-group">
           {% for it in cart %}
           <li class="list-group-item d-flex justify-content-between">
             <span>{{ it.qty|fraccion }} {{ 'Kg' if it.unit=='kg' else 'u' }} {{ it.name }}</span>
             <strong>${{ '%.2f'|format(it.line_total) }}</strong>
           </li>
-          <input type="hidden" name="qty_decimal_{{ loop.index0 }}" value="{{ it.qty }}">
-          <input type="hidden" name="product_{{ loop.index0 }}" value="{{ it.name }}">
-          <input type="hidden" name="unit_{{ loop.index0 }}" value="{{ it.unit }}">
           {% endfor %}
         </ul>
       </div>
@@ -104,110 +120,163 @@
     </div>
   </div>
 
-  <!-- === BOTONES DE ACCIÓN === -->
-  <div class="col-12 text-end">
-    <a class="btn btn-outline-secondary" href="{{ url_for('carrito') }}">Volver</a>
+  <div class="text-end">
+    <a class="btn btn-secondary" href="{{ url_for('carrito') }}">Volver</a>
     <button class="btn btn-success" type="submit" disabled>Confirmar pedido</button>
   </div>
 
   <input type="hidden" name="pago_final" id="pago_final">
-  <input type="hidden" name="cart_count" value="{{ cart|length }}">
-
 
 </form>
 
-<!-- === SCRIPT INTERACTIVO === -->
+<!-- ==========================
+     JS CORREGIDO 
+     ========================== -->
 <script>
-  // Función para convertir decimales a fracciones
-  function decimalAFraccion(decimal) {
-    decimal = parseFloat(decimal);
-    if (decimal === Math.round(decimal)) return Math.round(decimal).toString();
-    
-    const fracciones = {
-      0.25: '1/4',
-      0.5: '1/2',
-      0.75: '3/4',
-      0.33: '1/3',
-      0.66: '2/3'
-    };
-    
-    for (let [dec, frac] of Object.entries(fracciones)) {
-      if (Math.abs(decimal - parseFloat(dec)) < 0.01) return frac;
-    }
-    
-    const decimales = decimal.toString().split('.')[1]?.length || 0;
-    const denominador = Math.pow(10, decimales);
-    let numerador = Math.round(decimal * denominador);
-    
-    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-    const divisor = gcd(numerador, denominador);
-    
-    numerador = numerador / divisor;
-    const denom = denominador / divisor;
-    
-    if (denom === 1) return numerador.toString();
-    return `${numerador}/${denom}`;
+let pagoSeleccionado = null;
+let lugarSeleccionado = null;
+const msg = document.getElementById("mensaje-confirmacion");
+const badge = document.getElementById("badge-delivery-efectivo");
+const btnConfirm = document.querySelector('button[type="submit"]');
+
+// =======================
+// ACTUALIZAR MENSAJE
+// =======================
+function construirMensaje() {
+  const place = document.getElementById("place").value;
+
+  if (pagoSeleccionado === "Efectivo") {
+    return place === "delivery"
+      ? "💵 Perfecto, pagarás en efectivo al recibir el pedido."
+      : "💵 Perfecto, pagarás en efectivo al retirar en el local.";
   }
 
-  const botonesPago = document.querySelectorAll('.btn-pago');
-  const botonesLugar = document.querySelectorAll('.btn-lugar');
-  const mensaje = document.getElementById('mensaje-confirmacion');
-  const botonConfirmar = document.querySelector('button[type="submit"]');
-  const formulario = document.querySelector('form');
+  if (lugarSeleccionado === "Online")
+    return `💳 Perfecto, pagarás online con ${pagoSeleccionado}.`;
 
-  let pagoSeleccionado = null;
-  let lugarSeleccionado = null;
+  return `🏪 Perfecto, pagarás con ${pagoSeleccionado} en el local.`;
+}
 
-  function actualizarMensaje() {
-    if (pagoSeleccionado && lugarSeleccionado) {
-      mensaje.textContent = `✅ Perfecto, pagarás con ${pagoSeleccionado} ${lugarSeleccionado.toLowerCase()}.`;
-      mensaje.style.display = 'block';
-      botonConfirmar.disabled = false;
-    } else {
-      mensaje.style.display = 'none';
-      botonConfirmar.disabled = true;
-    }
-
-    document.getElementById("pago_final").value = `${pagoSeleccionado} - ${lugarSeleccionado}`;
-
+function actualizar() {
+  if (!pagoSeleccionado || !lugarSeleccionado) {
+    msg.style.display = "none";
+    btnConfirm.disabled = true;
+    return;
   }
 
-  botonesPago.forEach(b => {
-    b.addEventListener('click', () => {
-      botonesPago.forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      pagoSeleccionado = b.dataset.pago;
-      actualizarMensaje();
-    });
-  });
+  if (pagoSeleccionado === "Efectivo" && lugarSeleccionado === "Online") {
+    msg.style.display = "block";
+    msg.textContent = "❌ No podés pagar en efectivo de forma online.";
+    btnConfirm.disabled = true;
+    return;
+  }
 
-  botonesLugar.forEach(b => {
-    b.addEventListener('click', () => {
-      botonesLugar.forEach(x => x.classList.remove('active')); // CORRECCIÓN: antes 'butonesLugar'
-      b.classList.add('active');
-      lugarSeleccionado = b.dataset.lugar;
-      actualizarMensaje();
-    });
-  });
+  msg.style.display = "block";
+  msg.textContent = construirMensaje();
 
-  // Convertir decimales a fracciones antes de enviar
-  if (formulario) {
-    formulario.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const cartCount = parseInt(document.querySelector('input[name="cart_count"]').value || "0");
-      for (let i = 0; i < cartCount; i++) {
-        const inputDecimal = document.querySelector(`input[name="qty_decimal_${i}"]`);
-        if (inputDecimal) {
-          inputDecimal.value = decimalAFraccion(inputDecimal.value);
-        }
+  document.getElementById("pago_final").value =
+    `${pagoSeleccionado} - ${lugarSeleccionado}`;
+
+  btnConfirm.disabled = false;
+}
+
+// =======================
+// MÉTODO DE PAGO
+// =======================
+document.querySelectorAll(".btn-pago").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".btn-pago").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    pagoSeleccionado = btn.dataset.pago;
+
+    const place = document.getElementById("place").value;
+    const btnLocal = document.querySelector('.btn-lugar.local');
+    const btnOnline = document.querySelector('.btn-lugar.online');
+
+    // REGLAS DEFINITIVAS
+    if (place === "delivery") {
+      if (pagoSeleccionado === "Efectivo") {
+        btnLocal.style.display = "none";
+        btnOnline.style.display = "none";
+        lugarSeleccionado = "Al delivery";
+        badge.style.display = "block";
+      } else {
+        btnLocal.style.display = "none";
+        btnOnline.style.display = "block";
+        badge.style.display = "none";
       }
-      formulario.submit();
-    });
+    } else {
+      badge.style.display = "none";
+      btnLocal.style.display = "block";
+
+      if (pagoSeleccionado === "Efectivo") {
+        btnOnline.style.display = "none";
+      } else {
+        btnOnline.style.display = "block";
+      }
+    }
+
+    actualizar();
+  };
+});
+
+// =======================
+// LUGAR DE PAGO
+// =======================
+document.querySelectorAll(".btn-lugar").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".btn-lugar").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    lugarSeleccionado = btn.dataset.lugar;
+    actualizar();
+  };
+});
+
+// =======================
+// RETIRO / DELIVERY
+// =======================
+function selectPlace(tipo) {
+  const pickup = document.getElementById("pickupBox");
+  const delivery = document.getElementById("deliveryBox");
+  const pickupInput = document.getElementById("pickup_time");
+  const deliveryInput = document.getElementById("delivery_address");
+
+  const btnLocal = document.querySelector('.btn-lugar.local');
+  const btnOnline = document.querySelector('.btn-lugar.online');
+
+  document.getElementById("place").value = tipo;
+
+  if (tipo === "delivery") {
+    pickup.style.display = "none";
+    pickupInput.required = false;
+
+    delivery.style.display = "block";
+    deliveryInput.required = true;
+
+    btnLocal.style.display = "none";
+    btnOnline.style.display = "block";
+    
   } else {
-    console.error("Formulario no encontrado: no se podrá confirmar el pedido desde esta página.");
+    pickup.style.display = "block";
+    pickupInput.required = true;
+
+    delivery.style.display = "none";
+    deliveryInput.required = false;
+
+    btnLocal.style.display = "block";
+    btnOnline.style.display = "block";
   }
 
-  botonConfirmar.disabled = true;
+  badge.style.display = "none";
+
+  pagoSeleccionado = null;
+  lugarSeleccionado = null;
+
+  document.querySelectorAll('.btn-pago, .btn-lugar').forEach(b => b.classList.remove("active"));
+  actualizar();
+}
+
+btnConfirm.disabled = true;
 </script>
 
 {% else %}
