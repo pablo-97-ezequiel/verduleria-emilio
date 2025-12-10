@@ -66,7 +66,7 @@ En la sección "Environment" agrega estas variables:
 |-------|-------|
 | `SECRET_KEY` | `tu_clave_segura_aleatoria_aqui` * |
 | `ADMIN_PIN` | `tu_pin_admin` |
-| `EMILIO_WPP` | `5491167890400` |
+| `EMILIO_WPP` | `5491126586256` |
 | `FLASK_ENV` | `production` |
 | `FLASK_DEBUG` | `0` |
 | `PORT` | `10000` |
