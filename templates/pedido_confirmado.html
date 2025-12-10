@@ -60,13 +60,12 @@
 
   <button class="btn w-100"
           style="background:#009ee3;color:white;"
-          onclick="window.open('https://www.mercadopago.com.ar', '_blank');">
+          onclick="abrirMercadoPago();">
     🔵 Abrir Mercado Pago
   </button>
 
   <p class="text-muted mt-2" style="font-size:0.9rem;">
-    Este botón solo abre tu app.  
-    Luego pegá el alias para completar el pago.
+    Este botón intenta abrir la app de Mercado Pago.
   </p>
 
 </div>
@@ -87,19 +86,8 @@
     📋 Copiar alias de Cuenta DNI
   </button>
 
-  <button class="btn w-100"
-        style="background:#00a65a;color:white;"
-        onclick="window.location.href='bnppersonas://cuentadni'; 
-                 setTimeout(() => { 
-                   window.open('https://www.bancoprovincia.com.ar/web/cuentadni', '_blank'); 
-                 }, 800);">
-    🟢 Abrir Cuenta DNI
-</button>
-
-
   <p class="text-muted mt-2" style="font-size:0.9rem;">
-    Este botón solo abre tu app.  
-    Luego pegá el alias para completar el pago.
+    Copiá el alias y pegalo en tu app de Cuenta DNI.
   </p>
 
 </div>
@@ -168,6 +156,15 @@
       console.error("Error:", error);
       alert("Hubo un error al procesar tu pedido");
     });
+  }
+
+  function abrirMercadoPago() {
+    // Intenta abrir la app en móvil, si no funciona abre la web
+    window.location.href = "mercadopago://home";
+    // Después de 2 segundos, abre el fallback por si está en PC
+    setTimeout(() => {
+      window.open("https://www.mercadopago.com.ar", "_blank");
+    }, 2000);
   }
 </script>
 
